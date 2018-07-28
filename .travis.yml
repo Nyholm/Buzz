@@ -36,6 +36,7 @@ matrix:
 #        env: DEPENDENCIES="dunglas/symfony-lock:^4"
 
 before_install:
+    - sudo apt-cache search php
     - mkdir -p "$HOME/.php-cs-fixer"
     - echo "" | sudo add-apt-repository ppa:nginx/stable > /dev/null 2>&1
     - sudo apt-get -qq update
@@ -47,7 +48,8 @@ before_install:
 
 install:
     - sudo sh ./tests/.travis/update-curl.sh
-    - sudo apt-get install php7.1-curl
+    - sudo apt-cache search php
+    - sudo apt-get reinstall php
     - sudo sh ./tests/.travis/configure-php.sh $USER $(phpenv version-name)
     - ~/.phpenv/versions/$(phpenv version-name)/sbin/php-fpm
     # To be removed when this issue will be resolved: https://github.com/composer/composer/issues/5355
