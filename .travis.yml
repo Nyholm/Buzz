@@ -39,7 +39,7 @@ before_install:
     - mkdir -p "$HOME/.php-cs-fixer"
     - echo "" | sudo add-apt-repository ppa:nginx/stable > /dev/null 2>&1
     - sudo apt-get -qq update
-    - sudo apt-get uninstall curl
+    - sudo apt-get remove curl
     - sudo apt-get -qq install nginx squid
     - sudo stop squid3
     - if [[ $COVERAGE != true ]]; then phpenv config-rm xdebug.ini || true; fi
