@@ -60,7 +60,6 @@ before_script:
     - php -r "echo 'PHP cUrl version:\ '.curl_version()['version'];"
     - which curl
     - curl --version
-    - /usr/local/lib/curl --version
     - sudo nginx -p tests -c .travis/etc/nginx.conf
     - sudo squid3 -f tests/.travis/etc/squid.conf
     - vendor/bin/http_test_server > /dev/null 2>&1 &

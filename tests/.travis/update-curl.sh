@@ -20,7 +20,7 @@ autoconf
 make
 make install
 
-# Get latest (as of Dec 31, 2016) libcurl
+# Get latest (as of July 11, 2018) libcurl
 mkdir ~/curl
 cd ~/curl
 wget http://curl.haxx.se/download/curl-7.61.0.tar.bz2
