@@ -38,3 +38,5 @@ make install
 # Resolve any issues of C-level lib
 # location caches ("shared library cache")
 ldconfig
+
+ln -s /usr/bin/curl /usr/bin/curl
