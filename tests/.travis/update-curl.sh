@@ -23,15 +23,15 @@ make install
 # Get latest (as of Dec 31, 2016) libcurl
 mkdir ~/curl
 cd ~/curl
-wget http://curl.haxx.se/download/curl-7.52.1.tar.bz2
-tar -xvjf curl-7.52.1.tar.bz2
-cd curl-7.52.1
+wget http://curl.haxx.se/download/curl-7.61.0.tar.bz2
+tar -xvjf curl-7.61.0.tar.bz2
+cd curl-7.61.0
 
 # The usual steps for building an app from source
 # ./configure
 # ./make
 # sudo make install
-./configure --with-nghttp2=/usr/local --with-ssl
+./configure --with-nghttp2=/usr/local --with-ssl --prefix=/usr
 make
 make install
 
