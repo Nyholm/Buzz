@@ -54,8 +54,8 @@ install:
     - ./vendor/bin/simple-phpunit install
 
 before_script:
-    - php -r "echo 'PHP version: '.phpversion();"
-    - php -r "echo 'PHP cUrl version: '.curl_version()['version'];"
+    - php -r "echo 'PHP version:' .phpversion();"
+    - php -r "echo 'PHP cUrl version:' .curl_version()['version'];"
     - curl --version
     - sudo nginx -p tests -c .travis/etc/nginx.conf
     - sudo squid3 -f tests/.travis/etc/squid.conf
