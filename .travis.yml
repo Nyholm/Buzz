@@ -36,9 +36,6 @@ matrix:
 #        env: DEPENDENCIES="dunglas/symfony-lock:^4"
 
 before_install:
-    - ls -la /home/travis/.phpenv/shims/php
-    - ls -la /home/travis/.phpenv
-    - less /home/travis/.phpenv/.git/config
     - mkdir -p "$HOME/.php-cs-fixer"
     - echo "" | sudo add-apt-repository ppa:nginx/stable > /dev/null 2>&1
     - sudo apt-get -qq update
@@ -51,6 +48,7 @@ before_install:
 install:
     - sudo sh ./tests/.travis/update-curl.sh
     - sudo sh ./tests/.travis/configure-php.sh $USER $(phpenv version-name)
+    - phpenv rehash
     - ~/.phpenv/versions/$(phpenv version-name)/sbin/php-fpm
     # To be removed when this issue will be resolved: https://github.com/composer/composer/issues/5355
     - if [[ "$COMPOSER_FLAGS" == *"--prefer-lowest"* ]]; then composer update --prefer-dist --no-interaction --prefer-stable --quiet; fi
