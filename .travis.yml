@@ -63,7 +63,7 @@ before_script:
     - php -r "echo 'PHP version:\ '.phpversion();"
     - php -r "echo 'PHP cUrl version:\ '.curl_version()['version'];"
     - curl --version
-    - ldd curl.so | grep libcurl
+    - php -i
     - sudo nginx -p tests -c .travis/etc/nginx.conf
     - sudo squid3 -f tests/.travis/etc/squid.conf
     - vendor/bin/http_test_server > /dev/null 2>&1 &
