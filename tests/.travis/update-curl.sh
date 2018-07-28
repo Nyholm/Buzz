@@ -39,4 +39,4 @@ make install
 # location caches ("shared library cache")
 ldconfig
 
-ln -s /usr/local/bin/curl /usr/bin/curl
+#ln -s /usr/local/bin/curl /usr/bin/curl
