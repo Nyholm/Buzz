@@ -50,7 +50,7 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/simple-phpunit tests/Integration/FileGetContentsIntegrationTest.php",
+        "test": "vendor/bin/simple-phpunit tests/Integration/BrowserIntegrationTest.php",
         "test-ci": "vendor/bin/simple-phpunit --coverage-text --coverage-clover=build/coverage.xml"
     }
 }
