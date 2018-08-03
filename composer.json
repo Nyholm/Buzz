@@ -50,7 +50,7 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/simple-phpunit",
+        "test": "vendor/bin/simple-phpunit tests/Functional/MiddlewareChainTest.php",
         "test-ci": "vendor/bin/simple-phpunit --coverage-text --coverage-clover=build/coverage.xml"
     }
 }
