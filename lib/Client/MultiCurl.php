@@ -167,8 +167,6 @@ class MultiCurl extends AbstractCurl implements BatchClientInterface, BuzzClient
 
                     curl_setopt($pushed, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($pushed, CURLOPT_HEADER, true);
-                    curl_setopt($pushed, CURLOPT_HEADERFUNCTION, null);
-                    curl_setopt($pushed, CURLOPT_WRITEFUNCTION, null);
                     $this->addPushHandle($headers, $pushed);
 
                     return CURL_PUSH_OK;
@@ -194,6 +192,7 @@ class MultiCurl extends AbstractCurl implements BatchClientInterface, BuzzClient
                 && $options->get('use_pushed_response')
                 && $this->hasPushResponse($request->getUri()->__toString())
             ) {
+                echo "SERVE PUSHED RESPONSE\n";
                 $data = $this->getPushedResponse($request->getUri()->__toString());
                 $response = (new ResponseBuilder($this->responseFactory))->getResponseFromRawInput($data['content'], $data['headerSize']);
                 \call_user_func($options->get('callback'), $request, $response, null);
@@ -215,48 +214,57 @@ class MultiCurl extends AbstractCurl implements BatchClientInterface, BuzzClient
             $mrc = curl_multi_exec($this->curlm, $stillRunning);
         } while (CURLM_CALL_MULTI_PERFORM === $mrc);
 
-        while ($info = curl_multi_info_read($this->curlm)) {
-            // handle any completed requests
-            if (CURLMSG_DONE !== $info['msg']) {
-                continue;
-            }
 
-            $handled = false;
-            foreach (array_keys($this->queue) as $i) {
-                /** @var $request RequestInterface */
-                /** @var $options ParameterBag */
-                /** @var $responseBuilder ResponseBuilder */
-                list($request, $options, $curl, $responseBuilder) = $this->queue[$i];
+        while ($stillRunning && $mrc == CURLM_OK) {
+            curl_multi_select($this->curlm);
+            do {
+                $mrc = curl_multi_exec($this->curlm, $stillRunning);
+            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
 
-                // Try to find the correct handle from the queue.
-                if ($curl !== $info['handle']) {
+            while ($info = curl_multi_info_read($this->curlm)) {
+                echo "inside\n";
+                // handle any completed requests
+                if (CURLMSG_DONE !== $info['msg']) {
                     continue;
                 }
 
-                try {
-                    $handled = true;
-                    $response = null;
-                    $this->parseError($request, $info['result'], $curl);
-                    $response = $responseBuilder->getResponse();
-                } catch (\Throwable $e) {
-                    if (null === $exception) {
-                        $exception = $e;
+                $handled = false;
+                foreach (array_keys($this->queue) as $i) {
+                    /** @var $request RequestInterface */
+                    /** @var $options ParameterBag */
+                    /** @var $responseBuilder ResponseBuilder */
+                    list($request, $options, $curl, $responseBuilder) = $this->queue[$i];
+
+                    // Try to find the correct handle from the queue.
+                    if ($curl !== $info['handle']) {
+                        continue;
                     }
+
+                    try {
+                        $handled = true;
+                        $response = null;
+                        $this->parseError($request, $info['result'], $curl);
+                        $response = $responseBuilder->getResponse();
+                    } catch (\Throwable $e) {
+                        if (null === $exception) {
+                            $exception = $e;
+                        }
+                    }
+
+                    // remove from queue
+                    curl_multi_remove_handle($this->curlm, $curl);
+                    $this->releaseHandle($curl);
+                    unset($this->queue[$i]);
+
+                    // callback
+                    \call_user_func($options->get('callback'), $request, $response, $exception);
+                    $exception = null;
                 }
 
-                // remove from queue
-                curl_multi_remove_handle($this->curlm, $curl);
-                $this->releaseHandle($curl);
-                unset($this->queue[$i]);
-
-                // callback
-                \call_user_func($options->get('callback'), $request, $response, $exception);
-                $exception = null;
-            }
-
-            if (!$handled) {
-                // It must be a pushed response.
-                $this->handlePushedResponse($info['handle']);
+                if (!$handled) {
+                    // It must be a pushed response.
+                    $this->handlePushedResponse($info['handle']);
+                }
             }
         }
 
