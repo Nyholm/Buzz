@@ -173,7 +173,9 @@ class MultiCurl extends AbstractCurl implements BatchClientInterface, BuzzClient
                 };
 
                 curl_multi_setopt($this->curlm, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX);
-                curl_multi_setopt($this->curlm, CURLMOPT_PUSHFUNCTION, $cb);
+
+                // TODO if you uncomment this, everything crashes
+                //curl_multi_setopt($this->curlm, CURLMOPT_PUSHFUNCTION, $cb);
             }
         }
 
@@ -215,56 +217,49 @@ class MultiCurl extends AbstractCurl implements BatchClientInterface, BuzzClient
         } while (CURLM_CALL_MULTI_PERFORM === $mrc);
 
 
-        while ($stillRunning && $mrc == CURLM_OK) {
-            curl_multi_select($this->curlm);
-            do {
-                $mrc = curl_multi_exec($this->curlm, $stillRunning);
-            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+        while ($info = curl_multi_info_read($this->curlm)) {
+            echo "inside\n";
+            // handle any completed requests
+            if (CURLMSG_DONE !== $info['msg']) {
+                continue;
+            }
 
-            while ($info = curl_multi_info_read($this->curlm)) {
-                echo "inside\n";
-                // handle any completed requests
-                if (CURLMSG_DONE !== $info['msg']) {
+            $handled = false;
+            foreach (array_keys($this->queue) as $i) {
+                /** @var $request RequestInterface */
+                /** @var $options ParameterBag */
+                /** @var $responseBuilder ResponseBuilder */
+                list($request, $options, $curl, $responseBuilder) = $this->queue[$i];
+
+                // Try to find the correct handle from the queue.
+                if ($curl !== $info['handle']) {
                     continue;
                 }
 
-                $handled = false;
-                foreach (array_keys($this->queue) as $i) {
-                    /** @var $request RequestInterface */
-                    /** @var $options ParameterBag */
-                    /** @var $responseBuilder ResponseBuilder */
-                    list($request, $options, $curl, $responseBuilder) = $this->queue[$i];
-
-                    // Try to find the correct handle from the queue.
-                    if ($curl !== $info['handle']) {
-                        continue;
+                try {
+                    $handled = true;
+                    $response = null;
+                    $this->parseError($request, $info['result'], $curl);
+                    $response = $responseBuilder->getResponse();
+                } catch (\Throwable $e) {
+                    if (null === $exception) {
+                        $exception = $e;
                     }
-
-                    try {
-                        $handled = true;
-                        $response = null;
-                        $this->parseError($request, $info['result'], $curl);
-                        $response = $responseBuilder->getResponse();
-                    } catch (\Throwable $e) {
-                        if (null === $exception) {
-                            $exception = $e;
-                        }
-                    }
-
-                    // remove from queue
-                    curl_multi_remove_handle($this->curlm, $curl);
-                    $this->releaseHandle($curl);
-                    unset($this->queue[$i]);
-
-                    // callback
-                    \call_user_func($options->get('callback'), $request, $response, $exception);
-                    $exception = null;
                 }
 
-                if (!$handled) {
-                    // It must be a pushed response.
-                    $this->handlePushedResponse($info['handle']);
-                }
+                // remove from queue
+                curl_multi_remove_handle($this->curlm, $curl);
+                $this->releaseHandle($curl);
+                unset($this->queue[$i]);
+
+                // callback
+                \call_user_func($options->get('callback'), $request, $response, $exception);
+                $exception = null;
+            }
+
+            if (!$handled) {
+                // It must be a pushed response.
+                $this->handlePushedResponse($info['handle']);
             }
         }
 
