@@ -49,9 +49,5 @@
         "psr-4": {
             "Buzz\\Test\\": "tests"
         }
-    },
-    "scripts": {
-        "test": "vendor/bin/simple-phpunit --testsuite Unit",
-        "test-ci": "vendor/bin/simple-phpunit --coverage-text --coverage-clover=build/coverage.xml"
     }
 }

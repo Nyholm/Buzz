@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="3.9.3@2e4154d76e24d1b4e59e6cc2bebef7790cb9e550">
+  <file src="lib/Client/AbstractClient.php">
+    <InvalidScalarArgument occurrences="1">
+      <code>$e-&gt;getCode()</code>
+    </InvalidScalarArgument>
+    <PossiblyInvalidArgument occurrences="1">
+      <code>$e-&gt;getCode()</code>
+    </PossiblyInvalidArgument>
+  </file>
+  <file src="lib/Client/FileGetContents.php">
+    <PossiblyNullArgument occurrences="1">
+      <code>$error['message']</code>
+    </PossiblyNullArgument>
+    <PossiblyNullArrayAccess occurrences="1">
+      <code>$error['message']</code>
+    </PossiblyNullArrayAccess>
+  </file>
+  <file src="lib/Middleware/Cookie/CookieJar.php">
+    <PossiblyNullArgument occurrences="2">
+      <code>$cookie-&gt;getAttribute(Cookie::ATTR_DOMAIN)</code>
+      <code>$cookie-&gt;getAttribute(Cookie::ATTR_PATH)</code>
+    </PossiblyNullArgument>
+  </file>
+  <file src="lib/Middleware/LoggerMiddleware.php">
+    <ImplicitToStringCast occurrences="1">
+      <code>$request-&gt;getUri()</code>
+    </ImplicitToStringCast>
+  </file>
+</files>
