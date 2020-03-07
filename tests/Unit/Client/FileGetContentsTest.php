@@ -6,17 +6,10 @@ namespace Buzz\Test\Unit\Client;
 
 use Buzz\Client\FileGetContents;
 use Buzz\Configuration\ParameterBag;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Request;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-
-class StreamClient extends FileGetContents
-{
-    public function getStreamContextArray(RequestInterface $request, ParameterBag $options): array
-    {
-        return parent::getStreamContextArray($request, $options);
-    }
-}
 
 class FileGetContentsTest extends TestCase
 {
@@ -27,7 +20,13 @@ class FileGetContentsTest extends TestCase
             'Content-Length' => '15',
         ], 'foo=bar&bar=baz');
 
-        $client = new StreamClient();
+        $client = new class(new Psr17Factory()) extends FileGetContents {
+            public function getStreamContextArray(RequestInterface $request, ParameterBag $options): array
+            {
+                return parent::getStreamContextArray($request, $options);
+            }
+        };
+
         $expected = [
             'http' => [
                 'method' => 'POST',

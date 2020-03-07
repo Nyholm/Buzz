@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Buzz\Client;
 
 use Buzz\Configuration\ParameterBag;
-use Buzz\Message\HeaderConverter;
+use Buzz\Exception\CallbackException;
 use Buzz\Exception\ClientException;
 use Buzz\Exception\NetworkException;
 use Buzz\Exception\RequestException;
+use Buzz\Message\HeaderConverter;
 use Buzz\Message\ResponseBuilder;
-use Nyholm\Psr7\Factory\MessageFactory;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -29,6 +29,8 @@ abstract class AbstractCurl extends AbstractClient
 
         $resolver->setDefault('curl', []);
         $resolver->setAllowedTypes('curl', ['array']);
+        $resolver->setDefault('expose_curl_info', false);
+        $resolver->setAllowedTypes('expose_curl_info', ['boolean']);
     }
 
     /**
@@ -55,7 +57,7 @@ abstract class AbstractCurl extends AbstractClient
      */
     protected function releaseHandle($curl): void
     {
-        if (count($this->handles) >= $this->maxHandles) {
+        if (\count($this->handles) >= $this->maxHandles) {
             curl_close($curl);
         } else {
             // Remove all callback functions as they can hold onto references
@@ -67,22 +69,21 @@ abstract class AbstractCurl extends AbstractClient
             curl_setopt($curl, CURLOPT_WRITEFUNCTION, null);
             curl_setopt($curl, CURLOPT_PROGRESSFUNCTION, null);
             curl_reset($curl);
-            $this->handles[] = $curl;
+
+            if (!\in_array($curl, $this->handles)) {
+                $this->handles[] = $curl;
+            }
         }
     }
 
     /**
      * Prepares a cURL resource to send a request.
      *
-     * @param resource         $curl
-     * @param RequestInterface $request
-     * @param ParameterBag     $options
-     *
-     * @return ResponseBuilder
+     * @param resource $curl
      */
     protected function prepare($curl, RequestInterface $request, ParameterBag $options): ResponseBuilder
     {
-        if (defined('CURLOPT_PROTOCOLS')) {
+        if (\defined('CURLOPT_PROTOCOLS')) {
             curl_setopt($curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
             curl_setopt($curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
         }
@@ -94,7 +95,7 @@ abstract class AbstractCurl extends AbstractClient
         $this->setOptionsFromParameterBag($curl, $options);
         $this->setOptionsFromRequest($curl, $request);
 
-        $responseBuilder = new ResponseBuilder(new MessageFactory());
+        $responseBuilder = new ResponseBuilder($this->responseFactory);
         curl_setopt($curl, CURLOPT_HEADERFUNCTION, function ($ch, $data) use ($responseBuilder) {
             $str = trim($data);
             if ('' !== $str) {
@@ -105,7 +106,7 @@ abstract class AbstractCurl extends AbstractClient
                 }
             }
 
-            return strlen($data);
+            return \strlen($data);
         });
 
         curl_setopt($curl, CURLOPT_WRITEFUNCTION, function ($ch, $data) use ($responseBuilder) {
@@ -184,14 +185,11 @@ abstract class AbstractCurl extends AbstractClient
     }
 
     /**
-     * @param resource     $curl
-     * @param ParameterBag $options
+     * @param resource $curl
      */
     private function setOptionsFromParameterBag($curl, ParameterBag $options): void
     {
-        $timeout = $options->get('timeout');
-        $proxy = $options->get('proxy');
-        if ($proxy) {
+        if (null !== $proxy = $options->get('proxy')) {
             curl_setopt($curl, CURLOPT_PROXY, $proxy);
         }
 
@@ -200,16 +198,17 @@ abstract class AbstractCurl extends AbstractClient
         curl_setopt($curl, CURLOPT_MAXREDIRS, $canFollow ? $options->get('max_redirects') : 0);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $options->get('verify') ? 1 : 0);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $options->get('verify') ? 2 : 0);
-        curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
+        if (0 < $options->get('timeout')) {
+            curl_setopt($curl, CURLOPT_TIMEOUT, $options->get('timeout'));
+        }
     }
 
     /**
-     * @param RequestInterface $request
-     * @param int              $errno
-     * @param resource         $curl
+     * @param resource $curl
      *
      * @throws NetworkException
      * @throws RequestException
+     * @throws CallbackException
      */
     protected function parseError(RequestInterface $request, int $errno, $curl): void
     {
@@ -223,6 +222,8 @@ abstract class AbstractCurl extends AbstractClient
             case CURLE_OPERATION_TIMEOUTED:
             case CURLE_SSL_CONNECT_ERROR:
                 throw new NetworkException($request, curl_error($curl), $errno);
+            case CURLE_ABORTED_BY_CALLBACK:
+                throw new CallbackException($request, curl_error($curl), $errno);
             default:
                 throw new RequestException($request, curl_error($curl), $errno);
         }
@@ -236,7 +237,7 @@ abstract class AbstractCurl extends AbstractClient
             case '1.1':
                 return CURL_HTTP_VERSION_1_1;
             case '2.0':
-                if (defined('CURL_HTTP_VERSION_2_0')) {
+                if (\defined('CURL_HTTP_VERSION_2_0')) {
                     return CURL_HTTP_VERSION_2_0;
                 }
 

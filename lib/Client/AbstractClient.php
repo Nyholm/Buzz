@@ -6,6 +6,8 @@ namespace Buzz\Client;
 
 use Buzz\Configuration\ParameterBag;
 use Buzz\Exception\InvalidArgumentException;
+use Http\Message\ResponseFactory;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 abstract class AbstractClient
@@ -20,10 +22,23 @@ abstract class AbstractClient
      */
     private $options;
 
-    public function __construct(array $options = [])
+    /**
+     * @var ResponseFactoryInterface|ResponseFactory
+     */
+    protected $responseFactory;
+
+    /**
+     * @param ResponseFactoryInterface|ResponseFactory $responseFactory
+     */
+    public function __construct($responseFactory, array $options = [])
     {
+        if (!$responseFactory instanceof ResponseFactoryInterface && !$responseFactory instanceof ResponseFactory) {
+            throw new InvalidArgumentException(sprintf('First argument of %s must be an instance of %s or %s.', __CLASS__, ResponseFactoryInterface::class, ResponseFactory::class));
+        }
+
         $this->options = new ParameterBag();
         $this->options = $this->doValidateOptions($options);
+        $this->responseFactory = $responseFactory;
     }
 
     protected function getOptionsResolver(): OptionsResolver
@@ -72,7 +87,7 @@ abstract class AbstractClient
         $resolver->setDefaults([
             'allow_redirects' => false,
             'max_redirects' => 5,
-            'timeout' => 30,
+            'timeout' => 0,
             'verify' => true,
             'proxy' => null,
         ]);

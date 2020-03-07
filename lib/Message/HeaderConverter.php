@@ -22,18 +22,14 @@ namespace Buzz\Message;
 class HeaderConverter
 {
     /**
-     * Convert from Buzz style headers to PSR style.
-     *
-     * @param array $headers
-     *
-     * @return array
+     * Convert from PSR style headers to Buzz style.
      */
     public static function toBuzzHeaders(array $headers): array
     {
         $buzz = [];
 
         foreach ($headers as $key => $values) {
-            if (!is_array($values)) {
+            if (!\is_array($values)) {
                 $buzz[] = sprintf('%s: %s', $key, $values);
             } else {
                 foreach ($values as $value) {
@@ -46,11 +42,7 @@ class HeaderConverter
     }
 
     /**
-     * Convert from PSR style headers to Buzz style.
-     *
-     * @param array $headers
-     *
-     * @return array
+     * Convert from Buzz style headers to PSR style.
      */
     public static function toPsrHeaders(array $headers): array
     {

@@ -2,21 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Buzz\Test\Functional;
+namespace Buzz\Test\Integration;
 
 use Buzz\Browser;
 use Buzz\Client\AbstractClient;
 use Buzz\Middleware\MiddlewareInterface;
-use Http\Client\Tests\PHPUnitUtility;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Request;
-use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
  * @author Tobias Nyholm <tobias.nyholm@gmail.com>
  */
-class MiddlewareChainTest extends TestCase
+class MiddlewareChainTest extends BaseIntegrationTest
 {
     /**
      * @dataProvider getHttpClients
@@ -26,7 +25,7 @@ class MiddlewareChainTest extends TestCase
         MyMiddleware::$hasBeenHandled = false;
         MyMiddleware::$handleCount = 0;
 
-        $browser = new Browser($client);
+        $browser = new Browser($client, new Psr17Factory());
         $browser->addMiddleware(new MyMiddleware(
             function () {
                 ++MyMiddleware::$handleCount;
@@ -59,7 +58,7 @@ class MiddlewareChainTest extends TestCase
             }
         ));
 
-        $request = new Request('GET', PHPUnitUtility::getUri());
+        $request = new Request('GET', $_SERVER['BUZZ_TEST_SERVER']);
         $browser->sendRequest($request);
 
         $this->assertEquals(0, MyMiddleware::$handleCount);
@@ -69,9 +68,9 @@ class MiddlewareChainTest extends TestCase
     public function getHttpClients()
     {
         return [
-            [new \Buzz\Client\MultiCurl()],
-            [new \Buzz\Client\FileGetContents()],
-            [new \Buzz\Client\Curl()],
+            [new \Buzz\Client\MultiCurl(new Psr17Factory(), [])],
+            [new \Buzz\Client\FileGetContents(new Psr17Factory(), [])],
+            [new \Buzz\Client\Curl(new Psr17Factory(), [])],
         ];
     }
 }
@@ -91,10 +90,6 @@ class MyMiddleware implements MiddlewareInterface
     /** @var callable */
     private $responseCallable;
 
-    /**
-     * @param callable $requestCallable
-     * @param callable $responseCallable
-     */
     public function __construct(callable $requestCallable, callable $responseCallable)
     {
         $this->requestCallable = $requestCallable;
@@ -103,14 +98,14 @@ class MyMiddleware implements MiddlewareInterface
 
     public function handleRequest(RequestInterface $request, callable $next)
     {
-        call_user_func($this->requestCallable, $request);
+        \call_user_func($this->requestCallable, $request);
 
         return $next($request);
     }
 
     public function handleResponse(RequestInterface $request, ResponseInterface $response, callable $next)
     {
-        call_user_func($this->responseCallable, $request, $request);
+        \call_user_func($this->responseCallable, $request, $request);
 
         return $next($request, $response);
     }

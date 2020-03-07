@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Buzz;
 
 use Buzz\Client\BuzzClientInterface;
-use Buzz\Client\FileGetContents;
 use Buzz\Exception\ClientException;
 use Buzz\Exception\InvalidArgumentException;
 use Buzz\Exception\LogicException;
 use Buzz\Middleware\MiddlewareInterface;
 use Http\Message\RequestFactory;
-use Interop\Http\Factory\RequestFactoryInterface;
-use Nyholm\Psr7\Factory\MessageFactory;
+use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -22,12 +20,12 @@ class Browser implements BuzzClientInterface
     private $client;
 
     /** @var RequestFactoryInterface|RequestFactory */
-    private $factory;
+    private $requestFactory;
 
     /**
      * @var MiddlewareInterface[]
      */
-    private $middlewares = [];
+    private $middleware = [];
 
     /** @var RequestInterface */
     private $lastRequest;
@@ -35,10 +33,17 @@ class Browser implements BuzzClientInterface
     /** @var ResponseInterface */
     private $lastResponse;
 
-    public function __construct(BuzzClientInterface $client = null)
+    /**
+     * @param RequestFactoryInterface|RequestFactory $requestFactory
+     */
+    public function __construct(BuzzClientInterface $client, $requestFactory)
     {
-        $this->client = $client ?: new FileGetContents();
-        $this->factory = new MessageFactory();
+        if (!$requestFactory instanceof RequestFactoryInterface && !$requestFactory instanceof RequestFactory) {
+            throw new InvalidArgumentException(sprintf('Second argument of %s must be an instance of %s or %s.', __CLASS__, RequestFactoryInterface::class, RequestFactory::class));
+        }
+
+        $this->client = $client;
+        $this->requestFactory = $requestFactory;
     }
 
     public function get(string $url, array $headers = []): ResponseInterface
@@ -51,22 +56,22 @@ class Browser implements BuzzClientInterface
         return $this->request('POST', $url, $headers, $body);
     }
 
-    public function head(string $url, array  $headers = []): ResponseInterface
+    public function head(string $url, array $headers = []): ResponseInterface
     {
         return $this->request('HEAD', $url, $headers);
     }
 
-    public function patch(string $url, array  $headers = [], string $body = ''): ResponseInterface
+    public function patch(string $url, array $headers = [], string $body = ''): ResponseInterface
     {
         return $this->request('PATCH', $url, $headers, $body);
     }
 
-    public function put(string $url, array  $headers = [], string $body = ''): ResponseInterface
+    public function put(string $url, array $headers = [], string $body = ''): ResponseInterface
     {
         return $this->request('PUT', $url, $headers, $body);
     }
 
-    public function delete(string $url, array  $headers = [], string $body = ''): ResponseInterface
+    public function delete(string $url, array $headers = [], string $body = ''): ResponseInterface
     {
         return $this->request('DELETE', $url, $headers, $body);
     }
@@ -106,7 +111,9 @@ class Browser implements BuzzClientInterface
             } else {
                 // This is a file
                 $fileContent = file_get_contents($field['path']);
-                $files .= $this->prepareMultipart($name, $fileContent, $boundary, $field);
+                if (false !== $fileContent) {
+                    $files .= $this->prepareMultipart($name, $fileContent, $boundary, $field);
+                }
             }
         }
 
@@ -117,7 +124,7 @@ class Browser implements BuzzClientInterface
             $headers['Content-Type'] = 'multipart/form-data; boundary="'.$boundary.'"';
 
             foreach ($body as $name => $value) {
-                $files .= $this->prepareMultipart($name, $value, $boundary);
+                $files .= $this->prepareMultipart((string) $name, $value, $boundary);
             }
             $body = "$files--{$boundary}--\r\n";
         }
@@ -136,7 +143,7 @@ class Browser implements BuzzClientInterface
      */
     public function sendRequest(RequestInterface $request, array $options = []): ResponseInterface
     {
-        $chain = $this->createMiddlewareChain($this->middlewares, function (RequestInterface $request, callable $responseChain) use ($options) {
+        $chain = $this->createMiddlewareChain($this->middleware, function (RequestInterface $request, callable $responseChain) use ($options) {
             $response = $this->client->sendRequest($request, $options);
             $responseChain($request, $response);
         }, function (RequestInterface $request, ResponseInterface $response) {
@@ -151,21 +158,16 @@ class Browser implements BuzzClientInterface
     }
 
     /**
-     * @param MiddlewareInterface[] $middlewares
-     * @param callable              $requestChainLast
-     * @param callable              $responseChainLast
-     *
-     * @return callable
+     * @param MiddlewareInterface[] $middleware
      */
-    private function createMiddlewareChain(array $middlewares, callable $requestChainLast, callable $responseChainLast): callable
+    private function createMiddlewareChain(array $middleware, callable $requestChainLast, callable $responseChainLast): callable
     {
         $responseChainNext = $responseChainLast;
 
         // Build response chain
-        /** @var MiddlewareInterface $middleware */
-        foreach ($middlewares as $middleware) {
-            $lastCallable = function (RequestInterface $request, ResponseInterface $response) use ($middleware, $responseChainNext) {
-                return $middleware->handleResponse($request, $response, $responseChainNext);
+        foreach ($middleware as $m) {
+            $lastCallable = function (RequestInterface $request, ResponseInterface $response) use ($m, $responseChainNext) {
+                return $m->handleResponse($request, $response, $responseChainNext);
             };
 
             $responseChainNext = $lastCallable;
@@ -176,14 +178,13 @@ class Browser implements BuzzClientInterface
             $requestChainLast($request, $responseChainNext);
         };
 
-        $middlewares = array_reverse($middlewares);
+        $middleware = array_reverse($middleware);
 
         // Build request chain
         $requestChainNext = $requestChainLast;
-        /** @var MiddlewareInterface $middleware */
-        foreach ($middlewares as $middleware) {
-            $lastCallable = function (RequestInterface $request) use ($middleware, $requestChainNext) {
-                return $middleware->handleRequest($request, $requestChainNext);
+        foreach ($middleware as $m) {
+            $lastCallable = function (RequestInterface $request) use ($m, $requestChainNext) {
+                return $m->handleRequest($request, $requestChainNext);
             };
 
             $requestChainNext = $lastCallable;
@@ -209,12 +210,10 @@ class Browser implements BuzzClientInterface
 
     /**
      * Add a new middleware to the stack.
-     *
-     * @param MiddlewareInterface $middleware
      */
     public function addMiddleware(MiddlewareInterface $middleware): void
     {
-        $this->middlewares[] = $middleware;
+        $this->middleware[] = $middleware;
     }
 
     private function prepareMultipart(string $name, string $content, string $boundary, array $data = []): string
@@ -229,7 +228,7 @@ class Browser implements BuzzClientInterface
         }
 
         // Set a default content-length header
-        if ($length = strlen($content)) {
+        if ($length = \strlen($content)) {
             $fileHeaders['Content-Length'] = (string) $length;
         }
 
@@ -249,9 +248,9 @@ class Browser implements BuzzClientInterface
         return $output;
     }
 
-    protected function createRequest(string $method, string $url, array $headers, $body): RequestInterface
+    protected function createRequest(string $method, string $url, array $headers, string $body): RequestInterface
     {
-        $request = $this->factory->createRequest($method, $url);
+        $request = $this->requestFactory->createRequest($method, $url);
         $request->getBody()->write($body);
         foreach ($headers as $name => $value) {
             $request = $request->withAddedHeader($name, $value);

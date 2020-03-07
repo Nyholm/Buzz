@@ -55,11 +55,12 @@ final class ParameterBag implements \IteratorAggregate, \Countable
         // Make sure to merge Curl parameters
         if (isset($this->parameters['curl'])
             && isset($parameters['curl'])
-            && is_array($this->parameters['curl'])
-            && is_array($parameters['curl'])) {
+            && \is_array($this->parameters['curl'])
+            && \is_array($parameters['curl'])) {
             $parameters['curl'] = array_replace($this->parameters['curl'], $parameters['curl']);
         }
 
+        /** @var array $newParameters */
         $newParameters = array_replace($this->parameters, $parameters);
 
         return new self($newParameters);
@@ -70,12 +71,10 @@ final class ParameterBag implements \IteratorAggregate, \Countable
      *
      * @param string|int $key     The key
      * @param mixed      $default The default value if the parameter key does not exist
-     *
-     * @return mixed
      */
     public function get($key, $default = null)
     {
-        return array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
+        return \array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
     }
 
     /**
@@ -87,7 +86,7 @@ final class ParameterBag implements \IteratorAggregate, \Countable
      */
     public function has($key): bool
     {
-        return array_key_exists($key, $this->parameters);
+        return \array_key_exists($key, $this->parameters);
     }
 
     /**
@@ -107,6 +106,6 @@ final class ParameterBag implements \IteratorAggregate, \Countable
      */
     public function count(): int
     {
-        return count($this->parameters);
+        return \count($this->parameters);
     }
 }

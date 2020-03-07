@@ -1,18 +1,84 @@
 # Change log
 
-The change log shows what have been Added, Changed, Deprecated and Removed between versions. 
+The change log shows what have been Added, Changed, Deprecated and Removed between versions.
 
-## 0.17.0 (Not released)
+## 1.0.1
+
+### Fixed
+
+- Fixed issue with multiple cookies. 
+- Fixed `ContentTypeMiddleware` missing return.
+
+## 1.0.0
+
+### Changed
+
+- Default timout was changed from `30` to `0` (no limit).
+
+## 1.0.0-rc1
 
 ### Added
 
-- The first argument to all client constructors is an array of options. 
+- Support for HTTP/2 server push. 
+- Option `expose_curl_info` has been added to expose curl metadata information
+- Added `CallbackException` for Curl clients. 
+
+### Changed
+
+- Moved `Buzz\Util` to `Buzz\Middleware\Cookie`.
+
+## 1.0.0-beta2
+
+### Changed
+
+- `MultiCurl` will never throw exception when handling messages asynchronously.
+All exceptions will be handled in the callback.
+- `MultiCurl::sendRequest()` will throw exception if one occur.
+- Make sure `MultiCurl::proceed()` is non-blocking.
+
+## 1.0.0-beta1
+
+### Added
+
+- `ContentTypeMiddleware` that automatically detects content type of the body.
+
+### Changed
+
+- It is now mandatory to pass a client to the `Browser`'s constructor.
+- First argument of `Curl`, `MultiCurl` and `FileGetContent` clients should be the response factory.
+- Using stable version of `psr/http-client`.
+
+## 0.17.2
+
+### Changed
+
+- Added parameter for `ResponseFactory` to `AbstractClient` constructor.
+- Added parameter for  `RequestFactory` to `Browser` constructor.
+
+### Deprecated
+
+- Not passing a RequestFactory to `Browser`.
+- Not passing a ResponseFactory to the client's constructor.
+- Not passing a BuzzClientInterface to the `Browser`'s constructor.
+
+
+## 0.17.1
+
+### Added
+
+- Updated composer.json to show that we provide `php-http/client-implementation: 1.0`.
+
+## 0.17.0
+
+### Added
+
+- The first argument to all client constructors is an array of options.
 - A way to configure default options for a client: `AbstractClient::configureOptions(OptionsResolver $resolver)`
-- Added `ParameterBag` to store options. 
+- Added `ParameterBag` to store options.
 - Added `BatchClientInterface::sendAsyncRequest(RequestInterface $request, array $options = [])`.
 - Added `BuzzClientInterface::sendRequest(RequestInterface $request, array $options = []): ResponseInterface`.
-- Ported all Listeners to Middlewares. 
-- Added options to configure the client as constructor argument and when you send a request. 
+- Ported all Listeners to Middleware.
+- Added options to configure the client as constructor argument and when you send a request.
 
 ### Removed (BC breaks)
 
@@ -20,23 +86,23 @@ The change log shows what have been Added, Changed, Deprecated and Removed betwe
 - Removed `AbstractStream`.
 - Removed all listeners and `ListenerInterface`
 - Removed `Curl::getInfo()`
-- Client functions like `AbstractClient::setIgnoreErrors()`, `AbstractClient::getIgnoreErrors()`, `AbstractClient::setMaxRedirects()`, 
-`AbstractClient::getMaxRedirects()`, `AbstractClient::setTimeout()`, `AbstractClient::getTimeout()`, 
-`AbstractClient::setVerifyPeer()`, `AbstractClient::getVerifyPeer()`, `AbstractClient::getVerifyHost()`, 
+- Client functions like `AbstractClient::setIgnoreErrors()`, `AbstractClient::getIgnoreErrors()`, `AbstractClient::setMaxRedirects()`,
+`AbstractClient::getMaxRedirects()`, `AbstractClient::setTimeout()`, `AbstractClient::getTimeout()`,
+`AbstractClient::setVerifyPeer()`, `AbstractClient::getVerifyPeer()`, `AbstractClient::getVerifyHost()`,
 `AbstractClient::setVerifyHost()`, `AbstractClient::setProxy()` and `AbstractClient::getProxy()`.
 
 ### Changed (BC breaks)
 
 - Redirects are not followed by default
-- No exceptions are thrown and no warnings are triggered on a invalid response. 
-- We only handle PSR requests and responses. 
-- Renamed `Browser::call($url, $method, $headers, $body)` to `Browser::request($method, $url, $headers, $body)`. 
+- No exceptions are thrown and no warnings are triggered on a invalid response.
+- We only handle PSR requests and responses.
+- Renamed `Browser::call($url, $method, $headers, $body)` to `Browser::request($method, $url, $headers, $body)`.
 
 ## 0.16.1
 
 ### Added
 
-- `BasicAuthMiddleware`, `BearerAuthMiddleware`, `ContentLengthMiddleware` and `LoggerMiddleware`. 
+- `BasicAuthMiddleware`, `BearerAuthMiddleware`, `ContentLengthMiddleware` and `LoggerMiddleware`.
 - `Browser::submitForm`
 - Support for middleware chain when using `BatchClientInterface`
 - `FormRequestBuilder` to help build a "form request".
@@ -53,32 +119,32 @@ The change log shows what have been Added, Changed, Deprecated and Removed betwe
 
 ### Fixed
 
-- Make sure `Browser` does not call deprecated functions. 
+- Make sure `Browser` does not call deprecated functions.
 
 ## 0.16.0
 
 ### Changed
 
-* ClientInterface supports PSR7 requests and responses. 
+* ClientInterface supports PSR7 requests and responses.
 * Removed type hint for second parameter for `AbstractCurl::prepare`.
 * Removed type hint for second parameter for `RequestException::setRequest`.
 * Removed type hint for first parameter for `AbstractStream::getStreamContextArray`.
-* `RequestException` supports both PSR-7 requests and Buzz requests. 
-* `Response::getProtocolVersion` will return a string and not a float. 
+* `RequestException` supports both PSR-7 requests and Buzz requests.
+* `Response::getProtocolVersion` will return a string and not a float.
 * Using PHPUnit namespaces.
 
-### Added 
+### Added
 
 * Added Request and Response converters
 * Added `Curl::sendRequest()`, `MultiCurl::sendRequest()` and `FileGetContents::sendRequest()` that
-  supports sending PSR-7 requests. 
-* Added `Browser::sendRequest()` that supports middlewares.  
+  supports sending PSR-7 requests.
+* Added `Browser::sendRequest()` that supports middleware.
 * Added `MiddlewareInterface` and `Browser::addMiddleware()`.
-* Added `HeaderConverter` to convert between PSR-7 styled headers and Buzz styled headers. 
+* Added `HeaderConverter` to convert between PSR-7 styled headers and Buzz styled headers.
 
 ### Deprecated
 
-* `Curl::send()`, `MultiCurl::send()` and `FileGetContents::send()` in favor for `*::sendRequest()`. 
+* `Curl::send()`, `MultiCurl::send()` and `FileGetContents::send()` in favor for `*::sendRequest()`.
 * `AbstractCurl::populateResponse()` was deprecated in favor of `AbstractCurl::createResponse()`.
 
 ### Removed
@@ -87,20 +153,20 @@ The change log shows what have been Added, Changed, Deprecated and Removed betwe
 
 ## 0.15.2
 
-### Added 
+### Added
 
 * A `.gitattributes` was added to exclude test files and metadata.
 
 ### Changed
 
-* The reason phrase is allowed to be empty.  
+* The reason phrase is allowed to be empty.
 
-## 0.15.1 
+## 0.15.1
 
 ### Fixed
 
- * `MultiCurl` will throw exception when request fails. This makes `MultiCurl` to have the same behavior as `Curl` and 
-   `FileGetContents`. (Liskov Substitution Principle)  
+ * `MultiCurl` will throw exception when request fails. This makes `MultiCurl` to have the same behavior as `Curl` and
+   `FileGetContents`. (Liskov Substitution Principle)
 
 ### Added
 

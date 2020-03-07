@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Buzz\Test\Integration;
+namespace Buzz\Test\Integration\Httplug;
 
 use Buzz\Client\Curl;
+use Nyholm\Psr7\Factory\Psr17Factory;
 
 class CurlIntegrationTest extends BaseIntegrationTest
 {
     protected function createHttpAdapter()
     {
-        $client = new Curl();
-
-        return $client;
+        return new Curl(new Psr17Factory(), []);
     }
 
     /**
@@ -21,10 +20,10 @@ class CurlIntegrationTest extends BaseIntegrationTest
      */
     public function testSendRequest($method, $uri, array $headers, $body)
     {
-        if (defined('HHVM_VERSION')) {
+        if (\defined('HHVM_VERSION')) {
             static::markTestSkipped('This test can not run under HHVM');
         }
-        if (null !== $body && in_array($method, ['GET', 'HEAD', 'TRACE'], true)) {
+        if (null !== $body && \in_array($method, ['GET', 'HEAD', 'TRACE'], true)) {
             static::markTestSkipped('cURL can not send body using '.$method);
         }
         parent::testSendRequest($method, $uri, $headers, $body);

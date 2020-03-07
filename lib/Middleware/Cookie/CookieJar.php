@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Buzz\Util;
+namespace Buzz\Middleware\Cookie;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -35,25 +35,25 @@ class CookieJar
 
     /**
      * Adds a cookie to the current cookie jar.
-     *
-     * @param Cookie $cookie A cookie object
      */
     public function addCookie(Cookie $cookie): void
     {
-        $this->cookies[] = $cookie;
+        $this->cookies[$this->getHash($cookie)] = $cookie;
     }
 
     /**
      * Adds Cookie headers to the supplied request.
-     *
-     * @param RequestInterface $request A request object
      */
     public function addCookieHeaders(RequestInterface $request): RequestInterface
     {
+        $cookies = [];
         foreach ($this->getCookies() as $cookie) {
             if ($cookie->matchesRequest($request)) {
-                $request = $request->withHeader('Cookie', $cookie->toCookieHeader());
+                $cookies[] = $cookie->toCookieHeader();
             }
+        }
+        if ($cookies) {
+            $request = $request->withAddedHeader('Cookie', implode('; ', $cookies));
         }
 
         return $request;
@@ -61,9 +61,6 @@ class CookieJar
 
     /**
      * Processes Set-Cookie headers from a request/response pair.
-     *
-     * @param RequestInterface  $request  A request object
-     * @param ResponseInterface $response A response object
      */
     public function processSetCookieHeaders(RequestInterface $request, ResponseInterface $response): void
     {
@@ -71,7 +68,6 @@ class CookieJar
         foreach ($response->getHeader('Set-Cookie') as $header) {
             $cookie = new Cookie();
             $cookie->fromSetCookieHeader($header, $host);
-
             $this->addCookie($cookie);
         }
     }
@@ -90,5 +86,19 @@ class CookieJar
 
         $this->clear();
         $this->setCookies(array_values($cookies));
+    }
+
+    /**
+     * Create an unique identifier for the cookie. Two cookies with the same identifier
+     * may have different values.
+     */
+    private function getHash(Cookie $cookie): string
+    {
+        return sha1(sprintf(
+            '%s|%s|%s',
+            $cookie->getName(),
+            $cookie->getAttribute(Cookie::ATTR_DOMAIN),
+            $cookie->getAttribute(Cookie::ATTR_PATH)
+        ));
     }
 }

@@ -9,8 +9,8 @@ use Psr\Http\Message\ResponseInterface;
 
 class Journal implements \Countable, \IteratorAggregate
 {
+    /** @var Entry[] */
     private $entries = [];
-
     private $limit = 10;
 
     public function __construct(int $limit = 10)
@@ -23,7 +23,7 @@ class Journal implements \Countable, \IteratorAggregate
      *
      * @param RequestInterface  $request  The request
      * @param ResponseInterface $response The response
-     * @param null|float        $duration The duration in seconds
+     * @param float|null        $duration The duration in seconds
      */
     public function record(RequestInterface $request, ResponseInterface $response, float $duration = null): void
     {
@@ -33,7 +33,7 @@ class Journal implements \Countable, \IteratorAggregate
     public function addEntry(Entry $entry): void
     {
         array_push($this->entries, $entry);
-        $this->entries = array_slice($this->entries, $this->getLimit() * -1);
+        $this->entries = \array_slice($this->entries, $this->getLimit() * -1);
         end($this->entries);
     }
 
@@ -54,7 +54,8 @@ class Journal implements \Countable, \IteratorAggregate
 
     public function getLastRequest(): ?RequestInterface
     {
-        if (null === $entry = $this->getLast()) {
+        $entry = $this->getLast();
+        if (null === $entry) {
             return null;
         }
 
@@ -63,7 +64,8 @@ class Journal implements \Countable, \IteratorAggregate
 
     public function getLastResponse(): ?ResponseInterface
     {
-        if (null === $entry = $this->getLast()) {
+        $entry = $this->getLast();
+        if (null === $entry) {
             return null;
         }
 
@@ -77,7 +79,7 @@ class Journal implements \Countable, \IteratorAggregate
 
     public function count(): int
     {
-        return count($this->entries);
+        return \count($this->entries);
     }
 
     public function setLimit(int $limit): void

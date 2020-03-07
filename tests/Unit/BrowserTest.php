@@ -6,6 +6,7 @@ namespace Buzz\Test\Unit;
 
 use Buzz\Browser;
 use Buzz\Client\Curl;
+use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response;
 use PHPUnit\Framework\TestCase;
@@ -21,9 +22,11 @@ class BrowserTest extends TestCase
 
     protected function setUp()
     {
-        $this->client = $this->getMockBuilder('Buzz\Client\Curl')->getMock();
+        $this->client = $this->getMockBuilder('Buzz\Client\Curl')
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        $this->browser = new Browser($this->client);
+        $this->browser = new Browser($this->client, new Psr17Factory());
     }
 
     /**
@@ -36,7 +39,7 @@ class BrowserTest extends TestCase
 
         $this->client->expects($this->once())
             ->method('sendRequest')
-            ->will($this->returnValue($response));
+            ->willReturn($response);
 
         $actual = $this->browser->$method('http://google.com/', $headers, $content);
 
@@ -63,7 +66,7 @@ class BrowserTest extends TestCase
 
         $this->client->expects($this->once())
             ->method('sendRequest')
-            ->will($this->returnValue($response));
+            ->willReturn($response);
 
         $this->browser->sendRequest($request);
 
@@ -73,8 +76,8 @@ class BrowserTest extends TestCase
 
     public function testGetClient()
     {
-        $client = new Curl();
-        $browser = new Browser($client);
+        $client = new Curl(new Psr17Factory(), []);
+        $browser = new Browser($client, new Psr17Factory());
         $this->assertSame($client, $browser->getClient());
     }
 
@@ -137,7 +140,7 @@ class BrowserTest extends TestCase
             'user%5Bname%5D=Kris+Wallsmith&user%5Bemail%5D=foo%40bar.com',
         ];
         yield [
-            ['email' => 'foo@bar.com', 'image' => ['path' => dirname(__DIR__).'/Resources/pixel.gif']],
+            ['email' => 'foo@bar.com', 'image' => ['path' => \dirname(__DIR__).'/Resources/pixel.gif']],
             [],
             ['Content-Type' => 'regex|^multipart/form-data; boundary=".+"$|'],
             'regex|--[0-9a-f\.]+
@@ -154,11 +157,11 @@ foo@bar.com
 |', ];
         yield [
             ['email' => 'foo@bar.com', 'image' => [
-                'path' => dirname(__DIR__).'/Resources/pixel.gif',
+                'path' => \dirname(__DIR__).'/Resources/pixel.gif',
                 'contentType' => 'image/gif',
                 'filename' => 'my-pixel.gif',
             ], 'other-image' => [
-                'path' => dirname(__DIR__).'/Resources/pixel.gif',
+                'path' => \dirname(__DIR__).'/Resources/pixel.gif',
                 'contentType' => 'image/gif',
                 'filename' => 'other-pixel.gif',
             ]],

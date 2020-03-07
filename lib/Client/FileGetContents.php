@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Buzz\Client;
 
 use Buzz\Configuration\ParameterBag;
-use Buzz\Message\HeaderConverter;
 use Buzz\Exception\NetworkException;
+use Buzz\Message\HeaderConverter;
 use Buzz\Message\ResponseBuilder;
-use Nyholm\Psr7\Factory\MessageFactory;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -28,7 +27,7 @@ class FileGetContents extends AbstractClient implements BuzzClientInterface
             throw new NetworkException($request, $error['message']);
         }
 
-        $requestBuilder = new ResponseBuilder(new MessageFactory());
+        $requestBuilder = new ResponseBuilder($this->responseFactory);
         $requestBuilder->parseHttpHeaders($this->filterHeaders((array) $http_response_header));
         $requestBuilder->writeBody($content);
 
@@ -39,7 +38,6 @@ class FileGetContents extends AbstractClient implements BuzzClientInterface
      * Converts a request into an array for stream_context_create().
      *
      * @param RequestInterface $request A request object
-     * @param ParameterBag     $options
      *
      * @return array An array for stream_context_create()
      */
@@ -59,13 +57,16 @@ class FileGetContents extends AbstractClient implements BuzzClientInterface
                 'ignore_errors' => true,
                 'follow_location' => $options->get('allow_redirects') && $options->get('max_redirects') > 0,
                 'max_redirects' => $options->get('max_redirects') + 1,
-                'timeout' => $options->get('timeout'),
             ],
             'ssl' => [
                 'verify_peer' => $options->get('verify'),
                 'verify_host' => $options->get('verify'),
             ],
         ];
+
+        if (0 < $options->get('timeout')) {
+            $context['http']['timeout'] = $options->get('timeout');
+        }
 
         if (null !== $options->get('proxy')) {
             $context['http']['proxy'] = $options->get('proxy');
